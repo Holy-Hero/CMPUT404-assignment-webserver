@@ -1,14 +1,15 @@
-#  coding: utf-8 
+#  coding: utf-8
 import socketserver
 
+
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,11 +29,37 @@ import socketserver
 
 
 class MyWebServer(socketserver.BaseRequestHandler):
-    
+
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        print("Got a request of: %s\n" % self.data)
+
+        if not self.data == "":
+            self.data = self.data.split(" ")
+            if not self.data[0] == "GET":
+                self.res = "405 Method Not Allowed\n"
+            else:
+                self.res = "200 OK\n"
+                self.path = self.data[1]
+
+        if self.path == "/":
+            self.path = "/index.html"
+
+        if self.path.endwith("/") or self.path.endswith(".html") or self.path.endswith(".css"):
+            try:
+                file = open("www" + self.path + "Content-Type: text/html; UTF-8\n")
+                content = file.read()
+                file.close()
+
+                self.res = "HTTP/1.0 200 OK\n" + content
+            except:
+                self.res = "404 not found\n"
+            finally:
+                self.request.sendall(bytearray(self.res, 'utf-8'))
+        else:
+            self.res = "301 Moved Permanently/nNewLocation: " + self.path + "/"
+            self.request.sendall(bytearray(self.res, 'utf-8'))
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
