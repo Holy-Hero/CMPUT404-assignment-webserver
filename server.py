@@ -57,8 +57,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
             finally:
                 self.request.sendall(bytearray(self.res, 'utf-8'))
         else:
-            self.res = "301 Moved Permanently/nNewLocation: " + self.path + "/"
+            self.res = "301 Moved Permanently/nLocation: " + self.path + "/"
             self.request.sendall(bytearray(self.res, 'utf-8'))
+            return
 
 
 if __name__ == "__main__":
