@@ -1,5 +1,7 @@
 #  coding: utf-8
 import socketserver
+import os
+import traceback
 
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
@@ -31,39 +33,52 @@ import socketserver
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
-        self.data = self.request.recv(1024).strip()
+        self.data = self.request.recv(1024).strip().decode()
         print("Got a request of: %s\n" % self.data)
+        data = self.data.split(" ")
 
-        if not self.data == "":
-            self.data = self.data.split(" ")
-            if not self.data[0] == "GET":
-                self.res = "405 Method Not Allowed\n"
-            else:
-                self.res = "200 OK\n"
-                self.path = self.data[1]
-
-        if self.path == "/":
-            self.path = "/index.html"
-
-        if self.path.endwith("/") or self.path.endswith(".html") or self.path.endswith(".css"):
-            try:
-                file = open("www" + self.path + "Content-Type: text/html; UTF-8\n")
-                content = file.read()
-                file.close()
-
-                self.res = "HTTP/1.0 200 OK\n" + content
-            except:
-                self.res = "404 not found\n"
-            finally:
-                self.request.sendall(bytearray(self.res, 'utf-8'))
-        else:
-            self.res = "301 Moved Permanently/nLocation: " + self.path + "/"
-            self.request.sendall(bytearray(self.res, 'utf-8'))
+        if data[0] == "":
+            res = "HTTP/1.1 400 Bad Request\n"
+            self.request.sendall(bytearray(res, 'utf-8'))
             return
+        else:
+            if data[0] != "GET":
+                res = "HTTP/1.1 405 Method Not Allowed\n"
+                self.request.sendall(bytearray(res, 'utf-8'))
+                return
+            else:
+                res = "HTTP/1.1 200 OK\n"
+                path = data[1]
+
+                if path == "/":
+                    path = "/index.html"
+
+                try:
+                    if path.endswith(".html"):
+                        content = self.file_open(path)
+                        res = "HTTP/1.1 200 OK\nContent-Type: text/html\n" + content
+                    elif path.endswith(".css"):
+                        content = self.file_open(path)
+                        res = "HTTP/1.1 200 OK\nContent-Type: text/css\n" + content
+                    else:
+                        content = self.file_open(path)
+                except Exception as e:
+                        print(e)
+                        traceback.print_exc()
+                        res = "HTTP/1.1 404 Not Found\n"
+                finally:
+                    self.request.sendall(bytearray(res, 'utf-8'))
+                    return
+
+    def file_open(self, path):
+        file = open("www" + path)
+        content = file.read()
+        file.close()
+        return content
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 8080
+    HOST, PORT = "127.0.0.1", 8080
 
     socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to localhost on port 8080
