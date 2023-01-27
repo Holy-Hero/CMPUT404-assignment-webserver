@@ -4,7 +4,7 @@ import os
 import traceback
 
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Allan Ma
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,43 +38,39 @@ class MyWebServer(socketserver.BaseRequestHandler):
         data = self.data.split(" ")
 
         if data[0] == "":
-            res = "HTTP/1.1 400 Bad Request\n"
+            res = "HTTP/1.1 400 Bad Request\n\n"
             self.request.sendall(bytearray(res, 'utf-8'))
             return
         else:
             if data[0] != "GET":
-                res = "HTTP/1.1 405 Method Not Allowed\n"
+                res = "HTTP/1.1 405 Method Not Allowed\n\n"
                 self.request.sendall(bytearray(res, 'utf-8'))
                 return
             else:
-                res = "HTTP/1.1 200 OK\n"
+                res = "HTTP/1.1 404 Not Found\n"
                 path = data[1]
 
-                if path == "/":
-                    path = "/index.html"
+                if path.endswith("/"):
+                    path += "/index.html"
 
-                try:
-                    if path.endswith(".html"):
-                        content = self.file_open(path)
-                        res = "HTTP/1.1 200 OK\nContent-Type: text/html\n" + content
-                    elif path.endswith(".css"):
-                        content = self.file_open(path)
-                        res = "HTTP/1.1 200 OK\nContent-Type: text/css\n" + content
-                    else:
-                        content = self.file_open(path)
-                except Exception as e:
-                        print(e)
-                        traceback.print_exc()
-                        res = "HTTP/1.1 404 Not Found\n"
-                finally:
+                if os.path.isdir("www" + path + "/"):
+                    res = "HTTP/1.1 301 Move Permanently\nLocation: " + path + "/"
                     self.request.sendall(bytearray(res, 'utf-8'))
                     return
 
-    def file_open(self, path):
-        file = open("www" + path)
-        content = file.read()
-        file.close()
-        return content
+                try:
+                    file = open("./www" + path)
+                    content = file.read()
+                    file.close()
+                    if path.endswith(".html"):
+                        res = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n" + content
+                    elif path.endswith(".css"):
+                        res = "HTTP/1.1 200 OK\nContent-Type: text/css\n\n" + content
+                except Exception as e:
+                    res = "HTTP/1.1 404 Not Found\n\n"
+                finally:
+                    self.request.sendall(bytearray(res, 'utf-8'))
+                    return
 
 
 if __name__ == "__main__":
